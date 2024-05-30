@@ -4,7 +4,7 @@
 
 
 //========================================================================================================================
-void PrMatrix(std::vector<std::vector<float>>&matrix)
+void PrMatrix(std::vector<std::vector<float>>& matrix)
 {
 	for (int i = 0; i < matrix.size(); i++)
 	{
@@ -133,14 +133,12 @@ void ChDecOneBl(std::vector<float>& SubA, std::vector<float>& SubL, int& BlSide)
 	}
 }
 void CalcMat(std::vector<std::vector<float>>& A, std::vector<std::vector<float>>& L,
-	std::vector<float>& MatOut, int&BlSide, int&IndI, int&IndJ, int& MTileSide)
+	std::vector<float>& MatOut, int& BlSide, int& IndI, int& IndJ, int& MTileSide)
 {
 	std::vector<float>Mult, Sum;
 	Mult.resize(BlSide * BlSide);
 	Sum.resize(BlSide * BlSide);
 
-	// std::cout<<"Calcmat:"<<std::endl;
-	// std::cout<<"================================="<<std::endl;
 	for (int m = 0; m < IndJ; m++)
 	{
 		for (int i = 0; i < BlSide; i++)
@@ -259,25 +257,69 @@ void CheckSol(std::vector<std::vector<float>>& L, std::vector<float>& Inp, int& 
 			}
 		}
 	}
-	PrVec(Inp);
-	PrVec(Test);
-	LVec.clear(); 
+	if (Inp.size() == Test.size())
+	{
+		//for (int i = 0; i < Inp.size(); i++)
+		//{
+			//std::cout << Inp[i] << " " << Test[i] << std::endl;
+		//}
+		float TestPer1 = 0.0, SubPer = 0.0;
+
+		for (int i = 0; i < Inp.size(); i++)
+		{
+			SubPer = Inp[i] - Test[i];
+			TestPer1 = TestPer1 + std::pow(SubPer, 2);
+		}
+		TestPer1 = std::sqrt(TestPer1);
+		std::cout << TestPer1 << std::endl;
+
+		float TestPer2 = 0.0;
+		for(int i = 0; i < Inp.size(); i++)
+		{
+			TestPer2 = TestPer2 + std::pow(Inp[i],2);
+		}
+		std::cout<<TestPer2<<std::endl;
+		std::cout << "ForobN = "<<TestPer1 / TestPer2 << std::endl;
+
+	}
+	LVec.clear();
 	Test.clear();
 }
 int main()
 {
-	std::vector<float>Inp = { 1.0, 0.6, 	0.4, 0.2, 	0.1, 0.0,
-							  0.6, 1.0, 	0.6, 0.4, 	0.2, 0.1,
+	std::vector<float>Inp;
 
-							  0.4, 0.6,		1.0, 0.6, 	0.4, 0.2,
-							  0.2, 0.4, 	0.6, 1.0, 	0.6, 0.4,
+	//int nTile = 16, TileSize = 4;
+	//int MSide = 8, BlSide = 2;
+	//int MTileSide = 4;
 
-							  0.1, 0.2, 	0.4, 0.6, 	1.0, 0.6,
-							  0.0, 0.1, 	0.2, 0.4, 	0.6, 1.0 };
+	int nTile = 25, TileSize = 4;
+	int MSide = 10, BlSide = 2;
+	int MTileSide = 5;
 
-	int nTile = 9, TileSize = 4;
-	int MSide = 6, BlSide = 2;
-	int MTileSide = 3;
+
+	//int nTile = 4, TileSize = 25;
+	//int MSide = 10, BlSide = 5;
+	//int MTileSide = 2;
+
+	//int nTile = 25, TileSize = 25;
+	//int MSide = 25, BlSide = 5;
+	//int MTileSide = 5;
+
+
+	//Заполнение исходной матрицы 
+	Inp.resize(MSide * MSide);
+	float PowPer = 0.0;
+	for (int i = 0; i < MSide; i++)
+	{
+		for (int j = 0; j < MSide; j++)
+		{
+			PowPer = -((i - j) * (i - j));
+			Inp[i * MSide + j] = std::exp(PowPer);
+			std::cout << Inp[i * MSide + j] << " ";
+		}
+		std::cout << "\n";
+	}
 
 	std::vector<std::vector<float>>A(nTile, std::vector<float>(TileSize));
 	std::vector<std::vector<float>>L(nTile, std::vector<float>(TileSize));
@@ -305,6 +347,8 @@ int main()
 	//Проверка
 	std::cout << "CheckSol: " << std::endl;
 	CheckSol(L, Inp, MSide, BlSide);
+
+	Inp.clear();
 	//A.clear();
 	//L.clear();
 }
