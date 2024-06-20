@@ -1,139 +1,175 @@
 #include<iostream>
 #include<vector>
 #include<cmath>
-
-
+#include<lapacke.h>
+#include<cblas.h>
 //========================================================================================================================
+void FillMat(std::vector<float>&Inp, int&MSide)
+{
+    Inp.resize(MSide * MSide);
+    float PowPer = 0.0;
+    for (int i = 0; i < MSide; i++)
+    {
+	for (int j = 0; j < MSide; j++)
+	{
+	    PowPer = -((i - j) * (i - j));
+	    Inp[i * MSide + j] = std::exp(PowPer);
+	}
+    }
+}
 void PrMatrix(std::vector<std::vector<float>>& matrix)
 {
-	for (int i = 0; i < matrix.size(); i++)
+    for (int i = 0; i < matrix.size(); i++)
+    {
+	for (int j = 0; j < matrix[i].size(); j++)
 	{
-		for (int j = 0; j < matrix[i].size(); j++)
-		{
-			std::cout << matrix[i][j] << ' ';
-		}
-		std::cout << "\n";
+	     std::cout << matrix[i][j] << ' ';
 	}
+	std::cout << "\n";
+    }
 }
 void PrVec(std::vector<float>& Vec)
 {
-	for (int i = 0; i < Vec.size(); i++)
-	{
-		std::cout << Vec[i] << ' ';
+    for (int i = 0; i < Vec.size(); i++)
+    {
+	std::cout << Vec[i] << ' ';
+    }
+    std::cout << "\n";
+}
+void PrVecToMatr(std::vector<float>&Vec, int&MSide)
+{
+    for(int i = 0; i < MSide; i++)
+    {
+	for(int j = 0; j < MSide; j++)
+	{	
+	     std::cout<<Vec[i*MSide+j]<<' ';
 	}
-	std::cout << "\n";
+	std::cout<<"\n";
+   }
 }
 void WithZeroVec(std::vector<float>& Vec)
 {
-	for (int i = 0; i < Vec.size(); i++)
+    for (int i = 0; i < Vec.size(); i++)
+    {
+	Vec[i] = 0.0;
+    }
+}
+void WithZeroMatr(std::vector<std::vector<float>>& matrix)
+{
+     for (int i = 0; i < matrix.size(); i++)
+     {
+	for (int j = 0; j < matrix[i].size(); j++)
 	{
-		Vec[i] = 0.0;
+	    matrix[i][j] = 0.0;
 	}
+     }
 }
 //========================================================================================================================
 void SplitToBlock(std::vector<std::vector<float>>& A, std::vector<float>& Inp, int& MSide, int& BlSide)
 {
-	std::vector<float>Vec;
-	Vec.resize(MSide * MSide);
+    std::vector<float>Vec;
+    Vec.resize(MSide * MSide);
 
-	int VertBlNumber = 0, HorizBlockNumber = 0, ElInBlNumber = 0;
-	int VertBlIndex = 0, HorizBlIndex = 0;
-	int iBlock = 0, jBlock = 0;
-	int BlockIndex = 0;
-	int count = 0;
+    int VertBlNumber = 0, HorizBlockNumber = 0, ElInBlNumber = 0;
+    int VertBlIndex = 0, HorizBlIndex = 0;
+    int iBlock = 0, jBlock = 0;
+    int BlockIndex = 0;
+    int count = 0;
 
-	VertBlNumber = MSide / BlSide;
-	HorizBlockNumber = MSide / BlSide;
-	ElInBlNumber = BlSide * BlSide;
+    VertBlNumber = MSide / BlSide;
+    HorizBlockNumber = MSide / BlSide;
+    ElInBlNumber = BlSide * BlSide;
 
-	for (int i = 0; i < MSide; i++)
+    for (int i = 0; i < MSide; i++)
+    {
+	for (int j = 0; j < MSide; j++)
 	{
-		for (int j = 0; j < MSide; j++)
-		{
-			VertBlIndex = i / BlSide;
-			HorizBlIndex = j / BlSide;
-			iBlock = i % BlSide;
-			jBlock = j % BlSide;
-			BlockIndex = VertBlIndex * HorizBlockNumber + HorizBlIndex;
-			Vec[(BlockIndex * ElInBlNumber) + (iBlock * BlSide + jBlock)] = Inp[i * MSide + j];
-		}
+             VertBlIndex = i / BlSide;
+	     HorizBlIndex = j / BlSide;
+	     iBlock = i % BlSide;
+	     jBlock = j % BlSide;
+	     BlockIndex = VertBlIndex * HorizBlockNumber + HorizBlIndex;
+	     Vec[(BlockIndex * ElInBlNumber) + (iBlock * BlSide + jBlock)] = Inp[i * MSide + j];
 	}
-	for (int i = 0; i < A.size(); i++)
+   }
+   for (int i = 0; i < A.size(); i++)
+   {
+ 	for (int j = 0; j < A[i].size(); j++)
 	{
-		for (int j = 0; j < A[i].size(); j++)
-		{
-			A[i][j] = Vec[count];
-			count++;
-		}
+	     A[i][j] = Vec[count];
+	     count++;
 	}
-	Vec.clear();
+   }
+   Vec.clear();
 }
 
 void CombBlock(std::vector<std::vector<float>>& Matrix, std::vector<float>& Vec, int& MSide, int& BlSide)
 {
-	std::vector<float>Vec1;
-	Vec1.resize(MSide * MSide);
-	int count = 0;
-	for (int i = 0; i < Matrix.size(); i++)
+     std::vector<float>Vec1;
+     Vec1.resize(MSide * MSide);
+     int count = 0;
+     for (int i = 0; i < Matrix.size(); i++)
+     {
+	for (int j = 0; j < Matrix[i].size(); j++)
 	{
-		for (int j = 0; j < Matrix[i].size(); j++)
-		{
-			Vec1[count] = Matrix[i][j];
-			count++;
+	      Vec1[count] = Matrix[i][j];
+	      count++;
 
-		}
 	}
-	int VertBlNumber = 0, HorizBlockNumber = 0, ElInBlNumber = 0;
-	VertBlNumber = MSide / BlSide;
-	HorizBlockNumber = MSide / BlSide;
-	ElInBlNumber = BlSide * BlSide;
-	int VertBlIndex = 0, HorizBlIndex = 0;
-	int iBlock = 0, jBlock = 0;
-	int BlockIndex = 0;
+     }
+     int VertBlNumber = 0, HorizBlockNumber = 0, ElInBlNumber = 0;
+     VertBlNumber = MSide / BlSide;
+     HorizBlockNumber = MSide / BlSide;
+     ElInBlNumber = BlSide * BlSide;
+     int VertBlIndex = 0, HorizBlIndex = 0;
+     int iBlock = 0, jBlock = 0;
+     int BlockIndex = 0;
 
-	for (int i = 0; i < MSide; i++)
+     for (int i = 0; i < MSide; i++)
+     {
+	for (int j = 0; j < MSide; j++)
 	{
-		for (int j = 0; j < MSide; j++)
-		{
-			VertBlIndex = i / BlSide;
-			HorizBlIndex = j / BlSide;
-			iBlock = i % BlSide;
-			jBlock = j % BlSide;
-			BlockIndex = VertBlIndex * HorizBlockNumber + HorizBlIndex;
-			Vec[i * MSide + j] = Vec1[(BlockIndex * ElInBlNumber) + (iBlock * BlSide + jBlock)];
-		}
+		VertBlIndex = i / BlSide;
+		HorizBlIndex = j / BlSide;
+		iBlock = i % BlSide;
+		jBlock = j % BlSide;
+		BlockIndex = VertBlIndex * HorizBlockNumber + HorizBlIndex;
+		Vec[i * MSide + j] = Vec1[(BlockIndex * ElInBlNumber) + (iBlock * BlSide + jBlock)];
 	}
-	Vec1.clear();
+     }
+     Vec1.clear();
 }
-void ChDecOneBl(std::vector<float>& SubA, std::vector<float>& SubL, int& BlSide)
+void ChDecOneBl(std::vector<float>&SubA, std::vector<float>&SubL, int&BlSide)
 {
 	float Sum = 0.0;
 	for (int i = 0; i < BlSide; i++)
 	{
 		for (int j = 0; j <= i; j++)
-		{
+		{	
 			Sum = 0.0;
 			if (j == i)
 			{
 				for (int k = 0; k < j; k++)
 				{
-					Sum += std::pow(SubL[j * BlSide + k], 2);
+					Sum = Sum + (SubL[j*BlSide+k] * SubL[j*BlSide+k]);
 				}
-				SubL[j * BlSide + j] = std::sqrt(SubA[j * BlSide + j] - Sum);
+				SubL[j*BlSide+j] = std::sqrt(SubA[j*BlSide+j] - Sum);
 			}
-			else
+			else 
 			{
-				for (int k = 0; k < j; k++)
+				for (int m = 0; m < j; m++)
 				{
-					Sum += (SubL[i * BlSide + k] * SubL[j * BlSide + k]);
+					Sum = Sum + (SubL[j*BlSide+m] * SubL[i*BlSide+m]);
 				}
-				SubL[i * BlSide + j] = (SubA[i * BlSide + j] - Sum) / SubL[j * BlSide + j];
+				SubL[i*BlSide+j] = (SubA[i*BlSide+j]-Sum);
+				SubL[i*BlSide+j] = SubL[i*BlSide+j] / SubL[j*BlSide+j];
 			}
 		}
 	}
 }
-void CalcMat(std::vector<std::vector<float>>& A, std::vector<std::vector<float>>& L,
-	std::vector<float>& MatOut, int& BlSide, int& IndI, int& IndJ, int& MTileSide)
+
+void CalcMat(std::vector<std::vector<float>>&A, std::vector<std::vector<float>>&L,
+	std::vector<float>& MatOut, int& BlSide, int&IndI, int&IndJ, int& MTileSide)
 {
 	std::vector<float>Mult, Sum;
 	Mult.resize(BlSide * BlSide);
@@ -185,6 +221,7 @@ void LowInvTr(std::vector<float>& LowTr, std::vector<float>& Prom, std::vector<f
 				}
 				LInv[i * MSide + j] = -PrElem / LowTr[i * MSide + i];
 			}
+			PrElem = 0.0;
 		}
 	}
 	for (int i = 0; i < MSide; i++)
@@ -193,7 +230,7 @@ void LowInvTr(std::vector<float>& LowTr, std::vector<float>& Prom, std::vector<f
 		{
 			for (int k = 0; k < MSide; k++)
 			{
-				MatOut[i * MSide + j] = MatOut[i * MSide + j] + (Prom[i * MSide + k] * LInv[j * MSide + k]);
+				MatOut[i * MSide + j] = MatOut[i * MSide + j] + (Prom[i * MSide + k] * LInv[j* MSide + k]);
 			}
 		}
 	}
@@ -231,27 +268,43 @@ void CholDecomBlock(std::vector<std::vector<float>>& A, std::vector<std::vector<
 	}
 	Prom.clear();
 }
-void WithZeroMatr(std::vector<std::vector<float>>& matrix)
+void ChSolWithLap(std::vector<float>&Inp, std::vector<float>&LVec, std::vector<float>&Test, int&MSide)
 {
-	for (int i = 0; i < matrix.size(); i++)
+    Test = Inp;
+    int lda = 0, info = 0;
+    lda = std::max(1,MSide);
+    info = LAPACKE_spotrf(LAPACK_ROW_MAJOR, 'L', MSide, Test.data(), lda);
+    if(LVec.size() == Test.size())
 	{
-		for (int j = 0; j < matrix[i].size(); j++)
+		for(int i = 0; i < LVec.size(); i++)
 		{
-			matrix[i][j] = 0;
+			if(LVec[i] == 0.0)
+			{
+				Test[i] = 0.0;
+			}
+		}
+		std::cout<< "First matr "<<std::endl;
+		PrVecToMatr(LVec, MSide);
+		std::cout<< "LAP matr "<<std::endl;
+		PrVecToMatr(Test, MSide);
+		for(int i = 0; i < MSide; i++)
+		{
+			for(int j = 0; j < MSide; j++)
+			{	
+				std::cout<<LVec[i*MSide+j] <<" "<<Test[i*MSide+j]<<std::endl;
+			}
 		}
 	}
 }
-void CheckSol(std::vector<std::vector<float>>& L, std::vector<float>& Inp, int& MSide, int& BlSide)
+
+void CheckSolFrobN(std::vector<float>&Inp, std::vector<float>&LVec, std::vector<float>&Test, int&MSide)
 {
-	std::vector<float>LVec, Test;
-	LVec.resize(MSide * MSide);
-	Test.resize(MSide * MSide);
-	CombBlock(L, LVec, MSide, BlSide);
+	WithZeroVec(Test);
 	for (int i = 0; i < MSide; i++)
 	{
 		for (int j = 0; j < MSide; j++)
 		{
-			for (int k = 0; k < MSide; k++)//{}
+			for (int k = 0; k < MSide; k++)
 			{
 				Test[i * MSide + j] = Test[i * MSide + j] + (LVec[i * MSide + k] * LVec[j * MSide + k]);
 			}
@@ -259,16 +312,12 @@ void CheckSol(std::vector<std::vector<float>>& L, std::vector<float>& Inp, int& 
 	}
 	if (Inp.size() == Test.size())
 	{
-		//for (int i = 0; i < Inp.size(); i++)
-		//{
-			//std::cout << Inp[i] << " " << Test[i] << std::endl;
-		//}
 		float TestPer1 = 0.0, SubPer = 0.0;
 
 		for (int i = 0; i < Inp.size(); i++)
 		{
 			SubPer = Inp[i] - Test[i];
-			TestPer1 = TestPer1 + std::pow(SubPer, 2);
+			TestPer1 = TestPer1 + (SubPer*SubPer);
 		}
 		TestPer1 = std::sqrt(TestPer1);
 		std::cout << TestPer1 << std::endl;
@@ -276,79 +325,70 @@ void CheckSol(std::vector<std::vector<float>>& L, std::vector<float>& Inp, int& 
 		float TestPer2 = 0.0;
 		for(int i = 0; i < Inp.size(); i++)
 		{
-			TestPer2 = TestPer2 + std::pow(Inp[i],2);
+			TestPer2 = TestPer2 + (Inp[i]*Inp[i]);
 		}
+		TestPer2 = std::sqrt(TestPer2);
 		std::cout<<TestPer2<<std::endl;
-		std::cout << "ForobN = "<<TestPer1 / TestPer2 << std::endl;
-
+		std::cout << "FrobN = "<<TestPer1 / TestPer2 << std::endl;
 	}
-	LVec.clear();
-	Test.clear();
 }
 int main()
 {
 	std::vector<float>Inp;
 
-	//int nTile = 16, TileSize = 4;
-	//int MSide = 8, BlSide = 2;
-	//int MTileSide = 4;
+	int nTile = 4, TileSize = 9;
+	int MSide = 6, BlSide = 3;
+	int MTileSide = 2;
 
-	int nTile = 25, TileSize = 4;
-	int MSide = 10, BlSide = 2;
-	int MTileSide = 5;
-
-
-	//int nTile = 4, TileSize = 25;
-	//int MSide = 10, BlSide = 5;
-	//int MTileSide = 2;
-
-	//int nTile = 25, TileSize = 25;
-	//int MSide = 25, BlSide = 5;
-	//int MTileSide = 5;
-
-
-	//Заполнение исходной матрицы 
-	Inp.resize(MSide * MSide);
-	float PowPer = 0.0;
-	for (int i = 0; i < MSide; i++)
-	{
-		for (int j = 0; j < MSide; j++)
-		{
-			PowPer = -((i - j) * (i - j));
-			Inp[i * MSide + j] = std::exp(PowPer);
-			std::cout << Inp[i * MSide + j] << " ";
-		}
-		std::cout << "\n";
-	}
+	// int nTile = 9, TileSize = 4;
+	// int MSide = 6, BlSide = 2;
+	// int MTileSide = 3;
 
 	std::vector<std::vector<float>>A(nTile, std::vector<float>(TileSize));
 	std::vector<std::vector<float>>L(nTile, std::vector<float>(TileSize));
 
+	std::vector<float>Test;
+	std::vector<float>LVec;
+	Test.resize(MSide * MSide);
+	LVec.resize(MSide * MSide);
+	
+	//Заполнение исходной матрицы 
+	FillMat(Inp, MSide);
+	std::cout << "Fill Inp Matrix: " << std::endl;
+	PrVecToMatr(Inp, MSide);
+
 	//Разделение матрицы А на блоки
 	SplitToBlock(A, Inp, MSide, BlSide);
-	std::cout << "Matrix A: " << std::endl;
+	std::cout << "Matrix A(Block): " << std::endl;
 	PrMatrix(A);
-
+	
 	//Заполнение матрицы L нулями
 	WithZeroMatr(L);
-	std::cout << "Matrix L: " << std::endl;
+	std::cout << "Matrix L(Zero): " << std::endl;
 	PrMatrix(L);
 
 	//Разложение первого блока
 	ChDecOneBl(A[0], L[0], BlSide);
 	std::cout << "Matrix L(First block): " << std::endl;
-	PrMatrix(L);
+	PrVec(L[0]);
 
 	//Разложение по блокам
 	CholDecomBlock(A, L, MTileSide, BlSide);
 	std::cout << "PrBlockMatrix L: " << std::endl;
 	PrMatrix(L);
 
-	//Проверка
-	std::cout << "CheckSol: " << std::endl;
-	CheckSol(L, Inp, MSide, BlSide);
+	//Проверки
+	CombBlock(L, LVec, MSide, BlSide);
+	
+	//Проверка LAPACK для всей матрицы
+	std::cout << "ChSolWithLap: " << std::endl;
+	ChSolWithLap(Inp, LVec, Test, MSide);
+	
+	//Проверка FrobN
+	std::cout << "CheckSolFrobN: " << std::endl;
+	CheckSolFrobN(Inp, LVec, Test,MSide);
 
 	Inp.clear();
-	//A.clear();
-	//L.clear();
+	LVec.clear();
+	Test.clear();
 }
